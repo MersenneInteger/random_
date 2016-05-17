@@ -1,3 +1,10 @@
+/* This program simulates the Collatz Conjecture
+ * Let n be a postive integer, if n is even divide it by two,
+ * if n is odd, multiply it by three and add one.
+ * Repeating this process indefinitley, all positive numbers
+ * will reach one. This conjecture remains unproven for all natural numbers. 
+ */
+
 #include <iostream>
 
 int collatz(int n);
