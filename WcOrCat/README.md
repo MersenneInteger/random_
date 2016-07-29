@@ -4,8 +4,11 @@ which simulates the cat command. The second command line argument accepts a file
 to be used with either of the commands. For the time being only .txt files are compatible.
 
 Ex: 
+
 ./exe wc test.txt
+
  1 11 62 test.txt
  
  ./exe cat test.txt
+ 
  "displays contents of test.txt"
