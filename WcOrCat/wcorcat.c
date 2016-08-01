@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 int main(int argc, char *argv[]){
     
@@ -19,7 +20,6 @@ int main(int argc, char *argv[]){
     }
 
     if(!strcmp(argv[1],"wc")){ 
-        
         //get number of lines and words
         int lines = 0, words = 1;
         while((ch = getc(file)) != EOF){
@@ -28,19 +28,36 @@ int main(int argc, char *argv[]){
             if(ch == ' ')
                 words++;
         }
-
         //get file size in bytes
         fseek(file, 0, SEEK_END);
         int size = ftell(file);
         
         printf(" %d %d %d %s\n", lines, words, size, argv[2]);
 
-    }
+    }//cat
     else if (!strcmp(argv[1], "cat")){
         while((ch = getc(file)) != EOF) putchar(ch); 
+    }
+    //ls
+    else if (!strcmp(argv[1], "ls")){
+        
+        DIR *dir = opendir(argv[2]);
+        struct dirent *folder;
+
+        if(dir == NULL){
+            printf("Error opening directory.");
+            return 0;
         }
+        
+        while((folder = readdir(dir)) != NULL && strcmp(folder->d_name,".")){
+                if((strcmp(folder->d_name, "..")))  
+                            printf("%s ", folder->d_name);
+        }
+    
+        closedir(dir);    
+    }
     else
         printf("Operation not found.");
 
     return 0;
-}
+}//end of main
