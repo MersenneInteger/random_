@@ -2,6 +2,7 @@ This program accpets and reads two command line arguments (excluding ./exe),
 the first being either "wc" which simulates the wc command in UNIX or "cat" 
 which simulates the cat command. The second command line argument accepts a filename
 to be used with either of the commands. For the time being only .txt files are compatible.
+Update: added "ls" and "cp" commands.
 
 Ex: 
 
