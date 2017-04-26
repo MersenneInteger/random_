@@ -8,7 +8,6 @@ void hanoi(int rings, int left, int middle, int right)
         {
             hanoi(rings -1, left, right, middle);
             printf("Move 1 ring from tower %d to tower %d\n", left, middle);
-
             hanoi(rings -1, right, middle, left);
         }
 }
