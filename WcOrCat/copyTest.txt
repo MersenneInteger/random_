@@ -1,0 +1,1 @@
+This file should be opened and displayed on the command line.
