@@ -39,12 +39,37 @@ int trace(int dim, int mx[][dim])
     return trc;
 }
 
+void swap(int dim, int mx[dim][dim], int i, int j)
+{
+    int tmp;
+    tmp = mx[i][j];
+    mx[i][j] = mx[j][i];
+    mx[j][i] = tmp;
+}
+
+void transpose(int dim, int mx[][dim])
+{
+    int tmp;
+    for(int row = 0; row < dim; row++)
+        for(int col = 0; col < dim; col++)
+            if(row > col) 
+                swap(dim, mx, row, col);           
+    print_nxn_matrix(dim, mx);
+}
+
+void scalar_mult(int k, int dim, int mx[][dim])
+{
+    for(int row = 0; row < dim; row++)
+        for(int col = 0; col < dim; col++)
+            mx[row][col] = k * mx[row][col];
+    print_nxn_matrix(dim, mx);
+}
+
 int main(int argc, char **argv) {
   
    /* print trace of matrix */
    
     int matrix_size;
-    
     printf("Enter number of row and columns for the matrix: ");
     scanf("%d", &matrix_size);
     int matrix[matrix_size][matrix_size];
@@ -63,6 +88,13 @@ int main(int argc, char **argv) {
     int mx2[TWO_D][TWO_D] = {{2, 2}, {2,2}};
     
     add_matrices(TWO_D, mx1, mx2);
+
+    int mx3[THREE_D][THREE_D] = {{1,7,4},
+				 {9,2,1},
+				 {5,6,3}};
+    transpose(THREE_D, mx3);
+    scalar_mult(2, THREE_D, mx3);
+    printf("trace of mx3: %d\n", trace(THREE_D, mx3);
     
     return 0;
 }
