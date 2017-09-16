@@ -1,19 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ONE_D   1
-#define TWO_D   2
-#define THREE_D 3
-#define FOUR_D  4
+ #define ONE_D   1
+ #define TWO_D   2
+ #define THREE_D 3
+ #define FOUR_D  4
 
-void print_nxn_matrix(int sz, int mx[][sz])
+void print_matrix(int sz, int mx[][sz])
 {
     for(int row = 0; row < sz; row++) {
         for(int col = 0; col < sz; col++) {
-            if(row != 0 && col % sz == 0)
-                printf("\n");
             printf("%d ", mx[row][col]);
         }
+        printf("\n");
     }
 }
 
@@ -25,7 +24,7 @@ void add_matrices(int dim, int mx1[][dim], int mx2[][dim])
         for(int col = 0; col < dim; col++)
             sum_mx[row][col] = mx1[row][col] + mx2[row][col];
     
-    print_nxn_matrix(dim, sum_mx);
+    print_matrix(dim, sum_mx);
     printf("\n");
 }
 
@@ -54,7 +53,7 @@ void transpose(int dim, int mx[][dim])
         for(int col = 0; col < dim; col++)
             if(row > col) 
                 swap(dim, mx, row, col);           
-    print_nxn_matrix(dim, mx);
+    print_matrix(dim, mx);
 }
 
 void scalar_mult(int k, int dim, int mx[][dim])
@@ -62,7 +61,7 @@ void scalar_mult(int k, int dim, int mx[][dim])
     for(int row = 0; row < dim; row++)
         for(int col = 0; col < dim; col++)
             mx[row][col] = k * mx[row][col];
-    print_nxn_matrix(dim, mx);
+    print_matrix(dim, mx);
 }
 
 int main(int argc, char **argv) {
@@ -80,7 +79,7 @@ int main(int argc, char **argv) {
             scanf("%d", &matrix[row][col]);
         }
     }
-    print_nxn_matrix(matrix_size, matrix);
+    print_matrix(matrix_size, matrix);
     printf("Trace of matrix: %d\n",trace(matrix_size, matrix));
     
 
@@ -90,11 +89,11 @@ int main(int argc, char **argv) {
     add_matrices(TWO_D, mx1, mx2);
 
     int mx3[THREE_D][THREE_D] = {{1,7,4},
-				 {9,2,1},
-				 {5,6,3}};
+				                {9,2,1},
+				                {5,6,3}};
     transpose(THREE_D, mx3);
     scalar_mult(2, THREE_D, mx3);
-    printf("trace of mx3: %d\n", trace(THREE_D, mx3);
-    
+    printf("trace of mx3: %d\n", trace(THREE_D, mx3));
+
     return 0;
 }
