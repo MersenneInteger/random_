@@ -14,12 +14,14 @@ Comments:
 // #ENABLE_DYNAMIC
 #SYMBOL_NAME "Employee Database"
 // #HINT ""
-#DEFINE_CONSTANT  true  1
-#DEFINE_CONSTANT  false 0
+#DEFINE_CONSTANT  true    1
+#DEFINE_CONSTANT  false   0
 
-#DEFINE_CONSTANT PATH_MEMB "\\NVRAM\\members.bin"
-#DEFINE_CONSTANT PATH_NUM "\\NVRAM\\number.txt"
-#DEFINE_CONSTANT MAX_ENTRIES  25
+#DEFINE_CONSTANT PATH_MEMB  "\\NVRAM\\members.bin"
+#DEFINE_CONSTANT PATH_NUM   "\\NVRAM\\number.txt"
+
+#DEFINE_CONSTANT MAX_ENTRIES  100
+#DEFINE_CONSTANT DAIS         10
 
 #CATEGORY "46" 
 // #PRINT_TO_TRACE
@@ -38,18 +40,24 @@ Comments:
 /*******************************************************************************************
   DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
 *******************************************************************************************/
-DIGITAL_INPUT Start, Add_Employee, Delete_Employee, _skip_, Dias_Enter[10], _skip_, _skip_,
-              MemberSelected[25]; 
+DIGITAL_INPUT Start, Add_Employee, Delete_Employee, Logout, _skip_, Dais_Enter[DAIS], _skip_, _skip_,
+              MemberSelected[MAX_ENTRIES]; 
 // ANALOG_INPUT 
-STRING_INPUT  _skip_, _skip_, Add_PIN[255], Add_Name[255], _skip_, Member_PIN[MAX_ENTRIES][255];
+STRING_INPUT  _skip_, _skip_, Add_PIN[255], Add_Name[255], Add_User[255], Member_PIN[DAIS][255], _skip_, Member_Name[DAIS][255];
 // BUFFER_INPUT 
 
-DIGITAL_OUTPUT _skip_, _skip_, _skip_, _skip_,Dias_Status[10], _skip_, _skip_, _skip_, _skip_, _skip_,
-               _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
-              _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
-              _skip_, _skip_, _skip_, _skip_;
+DIGITAL_OUTPUT _skip_, _skip_, _skip_, _skip_,_skip_, Dais_Status[DAIS], _skip_, _skip_, _skip_, _skip_,
+              _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
+              _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
+              _skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_,
+              _skip_, _skip_,  _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
+              _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,_skip_,_skip_,
+              _skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, 
+              _skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, 
+              _skip_, _skip_,  _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_,  
+              _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_, _skip_, _skip_;
 ANALOG_OUTPUT Num_In_Database;
-STRING_OUTPUT   _skip_, _skip_, _skip_, _skip_, _skip_,Member_Name[MAX_ENTRIES], _skip_, DiasAttendees[10];
+STRING_OUTPUT  _skip_, _skip_, _skip_, Database_User[MAX_ENTRIES], _skip_, Dais_Attendees[DAIS];
 
 /*******************************************************************************************
   Structure Definitions
@@ -57,6 +65,7 @@ STRING_OUTPUT   _skip_, _skip_, _skip_, _skip_, _skip_,Member_Name[MAX_ENTRIES],
 structure council_member
 {
   string name[50];
+  string user[50];
   string pin[50];
 };
 council_member member;
@@ -65,7 +74,7 @@ council_member member_list[MAX_ENTRIES];
 /*******************************************************************************************
   Global Variables
 *******************************************************************************************/
-INTEGER num_of_members, last, j;
+INTEGER num_of_members, last;
 // LONG_INTEGER
 //SIGNED_INTEGER
 // SIGNED_LONG_INTEGER
@@ -74,16 +83,26 @@ INTEGER num_of_members, last, j;
 /*******************************************************************************************
   Functions
 *******************************************************************************************/
+function startup()
+{
+  integer i;
+  for(i = 0 to MAX_ENTRIES) {
+    member_list[i].name = " ";
+    member_list[i].pin = " ";
+    processlogic();
+  }
+}
+
 function read_member()
 {
   signed_integer i, file, bytes_read; 
+  i = 0;
+  
   startfileoperations();
   file = fileopen(PATH_MEMB, _O_RDONLY | _O_BINARY | _O_CREAT);
-  i = 0;
   while(FileEOF(file) = 0){
     readstructure(file, member_list[i], bytes_read);
-    Member_Name[i+1] = member_list[i].name;
-    trace("member: %s : %s", member_list[i].name, member_list[i].pin);
+    Database_User[i+1] = member_list[i].name;
     i = i + 1;
     processlogic();
   }
@@ -96,33 +115,35 @@ function read_member()
 function write_member()
 {
   signed_integer i, file, bytes_written;
+  i = 0;
+  
   startfileoperations();
   file = fileopen(PATH_MEMB, _O_BINARY | _O_RDWR | _O_TRUNC);
   if(file < 0)
     read_member();
-  i = 0;
   while(member_list[i].name != " "){
     writestructure(file, member_list[i], bytes_written);
-    Member_Name[i+1] = member_list[i].name;
-    trace("member: %s : %s", member_list[i].name, member_list[i].pin);
+    Database_User[i+1] = member_list[i].name;
     i = i + 1; 
     processlogic();
   }
   num_of_members = i;
-  trace("num_of_members = %i", num_of_members);
   fileclose(file);
   endfileoperations();
 }
 
-integer_function search_employee(string str)
+integer_function search_employee(string pin, string user)
 {
   integer i, found;
   found = -1;
   for(i = 0 to num_of_members) {
-    if(!comparestrings(member_list[i].pin, str)){
-      found = i+1;
-      break;
+    if(!comparestrings(member_list[i].pin, pin)){
+      if(!comparestrings(member_list[i].user, user)) {
+        found = i+1;
+        break;
+      }
     }
+    processlogic();
   }
   return(found);
 }
@@ -133,11 +154,14 @@ function shift_struct(integer index)
   for(i = index to num_of_members) {
     member_list[i].name = member_list[i+1].name;
     member_list[i].pin = member_list[i+1].pin;
-    Member_Name[i+1] = member_list[i].name;
+    member_list[i].user = member_list[i+1].user;
+    Database_User[i+1] = member_list[i].name;
+    processlogic();
   }
   member_list[num_of_members].name = " ";
   member_list[num_of_members].pin = " ";
-  Member_Name[i+1] = member_list[i].name;
+  member_list[num_of_members].user = " ";
+  Database_User[i+1] = member_list[i].name;
 }
 
 /*******************************************************************************************
@@ -153,8 +177,9 @@ push Add_Employee
   if(num_of_members + 1 <= MAX_ENTRIES){
     member_list[num_of_members].name = Add_Name;
     member_list[num_of_members].pin = Add_PIN;
+    member_list[num_of_members].user = Add_User;
     num_of_members = num_of_members + 1;
-    Member_Name[num_of_members] = Add_Name;
+    Database_User[num_of_members] = Add_Name;
     write_member();
   }else
     print("Error: Max Entries Exceeded");
@@ -165,25 +190,23 @@ push Delete_Employee
   if(num_of_members > 0){
     member_list[last-1].name = " ";
     member_list[last-1].pin = " ";
+    member_list[last-1].user = " ";
     num_of_members = num_of_members - 1;
     shift_struct(last-1);
     write_member();
   }
 }
 
-push Dias_Enter
+push Dais_Enter
 {
   integer loc, press;
   press = getlastmodifiedarrayindex();
-  trace("press = %i", press);
-  loc = search_employee(Member_PIN[press]);
-  trace("loc = %i\nMember_PIN[press] = %s", loc, Member_PIN[press]);
+  loc = search_employee(Member_PIN[press], Member_Name[press]);
   if(loc != -1) {
-    trace("valid");
-    DiasAttendees[press] = member_list[loc-1].name;
-    pulse(20, Dias_Status[press]);
+    Dais_Attendees[press] = member_list[loc-1].name;
+    pulse(20, Dais_Status[press]);
   }else
-    Dias_Status[press] = off;
+    Dais_Status[press] = off;
 }
 
 push MemberSelected
@@ -191,15 +214,15 @@ push MemberSelected
   last = getlastmodifiedarrayindex();
 }
 
+push Logout
+{
+  setarray(Dais_Attendees, "");
+}
 /*******************************************************************************************
   Main()
 *******************************************************************************************/
 Function Main()
 {
   waitforinitializationcomplete();
-  for(j = 0 to MAX_ENTRIES) {
-    member_list[j].name = " ";
-    member_list[j].pin = " ";
-    processlogic();
-  }
+  startup();
 }
