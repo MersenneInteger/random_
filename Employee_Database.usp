@@ -23,7 +23,7 @@ Comments:
 #DEFINE_CONSTANT MAX_ENTRIES  100
 #DEFINE_CONSTANT DAIS         10
 
-#CATEGORY "46" 
+#CATEGORY "46" "Utilities"
 // #PRINT_TO_TRACE
 // #DIGITAL_EXPAND 
 // #ANALOG_SERIAL_EXPAND 
@@ -157,7 +157,7 @@ integer_function search_employee(string pin, string user)
 function shift_struct(integer index)
 {
   integer i;
-  for(i = index to num_of_members) {
+  for(i = index to num_of_members-1) {
     member_list[i].name = member_list[i+1].name;
     member_list[i].pin = member_list[i+1].pin;
     member_list[i].user = member_list[i+1].user;
