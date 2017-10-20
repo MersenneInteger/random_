@@ -86,9 +86,10 @@ INTEGER num_of_members, last;
 function startup()
 {
   integer i;
-  for(i = 0 to MAX_ENTRIES) {
+  for(i = 0 to MAX_ENTRIES-1) {
     member_list[i].name = " ";
     member_list[i].pin = " ";
+    member_list[i].user = " ";
     processlogic();
   }
 }
@@ -134,16 +135,21 @@ function write_member()
 
 integer_function search_employee(string pin, string user)
 {
-  integer i, found;
+  integer i, found, flag;
+  flag = false;
   found = -1;
-  for(i = 0 to num_of_members) {
-    if(!comparestrings(member_list[i].pin, pin)){
-      if(!comparestrings(member_list[i].user, user)) {
+  
+  for(i = 0 to num_of_members-1) {
+    if(flag) break;
+    if((comparestrings(member_list[i].pin, pin) = 0) && (comparestrings(member_list[i].user, user) = 0)){
         found = i+1;
-        break;
-      }
+        flag = true;
     }
-    processlogic();
+    //processlogic();
+    /*
+      process logic in this loop caused some logic evals to be skipped
+      works consistenly after it was commented out, something to look into
+    */
   }
   return(found);
 }
@@ -202,6 +208,7 @@ push Dais_Enter
   integer loc, press;
   press = getlastmodifiedarrayindex();
   loc = search_employee(Member_PIN[press], Member_Name[press]);
+  trace("loc = %i", loc);
   if(loc != -1) {
     Dais_Attendees[press] = member_list[loc-1].name;
     pulse(20, Dais_Status[press]);
@@ -216,7 +223,8 @@ push MemberSelected
 
 push Logout
 {
-  setarray(Dais_Attendees, "");
+  setarray(Dais_Attendees, " ");
+  last = -1;
 }
 /*******************************************************************************************
   Main()
