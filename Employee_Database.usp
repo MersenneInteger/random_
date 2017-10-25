@@ -40,7 +40,7 @@ Comments:
 /*******************************************************************************************
   DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
 *******************************************************************************************/
-DIGITAL_INPUT Start, Add_Employee, Delete_Employee, Logout, _skip_, Dais_Enter[DAIS], _skip_, _skip_,
+DIGITAL_INPUT Start, Add_Employee, Delete_Employee, Logout, Sort, Dais_Enter[DAIS], _skip_, _skip_,
               MemberSelected[MAX_ENTRIES]; 
 // ANALOG_INPUT 
 STRING_INPUT  _skip_, _skip_, Add_PIN[255], Add_Name[255], Add_User[255], Member_PIN[DAIS][255], _skip_, Member_Name[DAIS][255];
@@ -141,15 +141,11 @@ integer_function search_employee(string pin, string user)
   
   for(i = 0 to num_of_members-1) {
     if(flag) break;
-    if((comparestrings(member_list[i].pin, pin) = 0) && (comparestrings(member_list[i].user, user) = 0)){
+    if(!comparestrings(member_list[i].pin, pin) && !comparestrings(member_list[i].user, user)){
         found = i+1;
         flag = true;
     }
     //processlogic();
-    /*
-      process logic in this loop caused some logic evals to be skipped
-      works consistenly after it was commented out, something to look into
-    */
   }
   return(found);
 }
@@ -170,12 +166,33 @@ function shift_struct(integer index)
   Database_User[i+1] = member_list[i].name;
 }
 
+function insertion_sort()
+{
+  integer i, j;
+  string key[255];
+  for(i = 1 to num_of_members-1){
+    key = member_list[i].name;
+    j = i-1;
+    while(j >= 0 && (comparestrings(key, member_list[j].name) < 0)){
+      member_list[j+1].name = member_list[j].name;
+      member_list[j+1].pin = member_list[j].pin;
+      member_list[j+1].user = member_list[j].user;
+      Database_User[j+1] = member_list[j].name;
+      j = j - 1;
+    }
+    member_list[j+1].name = key;
+    Database_User[j+1] = key;
+  }
+  write_member();
+}
+
 /*******************************************************************************************
   Event Handlers
 *******************************************************************************************/
 push Start
 {
   read_member();
+  delay(20);
 }
 
 push Add_Employee
@@ -208,7 +225,6 @@ push Dais_Enter
   integer loc, press;
   press = getlastmodifiedarrayindex();
   loc = search_employee(Member_PIN[press], Member_Name[press]);
-  trace("loc = %i", loc);
   if(loc != -1) {
     Dais_Attendees[press] = member_list[loc-1].name;
     pulse(20, Dais_Status[press]);
@@ -225,7 +241,15 @@ push Logout
 {
   setarray(Dais_Attendees, " ");
   last = -1;
+  delay(20);
 }
+
+push Sort
+{
+  insertion_sort();
+  delay(20);
+}
+
 /*******************************************************************************************
   Main()
 *******************************************************************************************/
