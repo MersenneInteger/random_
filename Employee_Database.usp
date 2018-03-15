@@ -20,7 +20,7 @@ Comments:
 #DEFINE_CONSTANT PATH_MEMB  "\\NVRAM\\members.bin"
 #DEFINE_CONSTANT PATH_NUM   "\\NVRAM\\number.txt"
 
-#DEFINE_CONSTANT MAX_ENTRIES  100
+#DEFINE_CONSTANT MAX_ENTRIES  101
 #DEFINE_CONSTANT DAIS         10
 
 #CATEGORY "46" "Utilities"
@@ -46,7 +46,7 @@ DIGITAL_INPUT Start, Add_Employee, Delete_Employee, Logout, Sort, Dais_Enter[DAI
 STRING_INPUT  _skip_, _skip_, Add_PIN[255], Add_Name[255], Add_User[255], Member_PIN[DAIS][255], _skip_, Member_Name[DAIS][255];
 // BUFFER_INPUT 
 
-DIGITAL_OUTPUT _skip_, _skip_, _skip_, _skip_,_skip_, Dais_Status[DAIS], _skip_, _skip_, _skip_, _skip_,
+DIGITAL_OUTPUT Show_Admin, _skip_, _skip_, _skip_,_skip_, Dais_Status[DAIS], _skip_, _skip_, _skip_, _skip_,
               _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
               _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_, _skip_,
               _skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_, _skip_,_skip_, _skip_, _skip_,
@@ -142,8 +142,10 @@ integer_function search_employee(string pin, string user)
   for(i = 0 to num_of_members-1) {
     if(flag) break;
     if(!comparestrings(member_list[i].pin, pin) && !comparestrings(member_list[i].user, user)){
-        found = i+1;
-        flag = true;
+      if(!comparestrings(pin, "****") && !comparestrings(user, "admin"))
+        Show_Admin = on;
+      found = i+1;
+      flag = true;
     }
     //processlogic();
   }
@@ -222,7 +224,8 @@ push Delete_Employee
 
 push Dais_Enter
 {
-  integer loc, press;
+  integer press;
+  signed_integer loc;
   press = getlastmodifiedarrayindex();
   loc = search_employee(Member_PIN[press], Member_Name[press]);
   if(loc != -1) {
@@ -241,12 +244,13 @@ push Logout
 {
   setarray(Dais_Attendees, " ");
   last = -1;
+  Show_Admin = off;
   delay(20);
 }
 
 push Sort
 {
-  insertion_sort();
+  //insertion_sort();
   delay(20);
 }
 
