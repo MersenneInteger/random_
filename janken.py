@@ -1,47 +1,38 @@
 import random
 
-validChoices = ['r', 'R', 'p', 'P', 's', 'S']
-
-def printResult(move):
-    if move in validChoices[0:2]:
-        return 'rock'
-    elif move in validChoices[2:4]:
-        return 'paper'
-    elif move in validChoices[4:6]:
-        return 'scissors'
+validChoices = {1:'rock', 2:'paper', 3:'scissors'}
 
 def evalOutcome(playerMove, aiMove):
-    player = printResult(playerMove)
-    ai = printResult(aiMove)
     print('*' * 25)
-    print('Player chooses: ' + player)
-    print('AI chooses: ' + ai)
+    print('Player\'s move: ' + playerMove)
+    print('AI\'s move: ' + aiMove)
 
-    if player == ai:
+    if playerMove == aiMove:
         print('Draw!')
-    elif playerMove in validChoices[0:2]: #rock
-        if aiMove in validChoices[2:4]:   
+    elif playerMove == validChoices[1]: #rock
+        if aiMove == validChoices[2]:   
             print('paper beats rock! AI wins!')
-        elif aiMove in validChoices[4:6]:
+        elif aiMove == validChoices[3]:
             print('rock beats scissors! You win!')
-    elif playerMove in validChoices[2:4]: #paper
-        if aiMove in validChoices[0:2]:
+    elif playerMove == validChoices[2]: #paper
+        if aiMove == validChoices[1]:
             print('paper beats rock! You win!')
-        elif aiMove in validChoices[4:6]:
+        elif aiMove in validChoices[3]:
             print('scissors beats paper! AI wins!')
-    elif playerMove in validChoices[4:6]: #scissors
-        if aiMove in validChoices[0:2]:
+    elif playerMove in validChoices[3]: #scissors
+        if aiMove in validChoices[1]:
             print('rock beats scissors! AI wins!')
-        elif aiMove in validChoices[2:4]:
+        elif aiMove in validChoices[2]:
             print('scissors beats paper! You win!')
 
 while True:
-    choice = input('Choose rock(r), paper(p), or scissors(s): ')
-    if choice not in validChoices:
+    choice = input('Choose rock, paper, or scissors: ')
+    if choice not in validChoices.values():
         print('Invalid input')
         continue
 
-    aiChoice = validChoices[random.randrange(0,7)]
+    aiChoice = validChoices[random.randrange(1,4)]
+    print('AI Choice = ' + aiChoice)
     evalOutcome(choice, aiChoice)
     print('\nPlayer again(y/n)?')
     continuePlaying = input()
