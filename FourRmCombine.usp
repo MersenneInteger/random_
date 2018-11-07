@@ -1,0 +1,555 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+*******************************************************************************************/
+/*
+Comments: Testing if S+ room combining is more efficent than SIMPL truthtable + buffer method
+*/
+#DEFINE_CONSTANT true 1
+#DEFINE_CONSTANT false 0
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE
+
+digital_input RoomA_RoomB_Partition;
+digital_input RoomB_RoomC_Partition;
+digital_input RoomC_RoomD_Partition;
+digital_input RoomD_RoomA_Partition;
+
+digital_output RoomA_RoomB_Partition_Open;
+digital_output RoomA_RoomB_Partition_Closed;
+digital_output RoomB_RoomC_Partition_Open;
+digital_output RoomB_RoomC_Partition_Closed;
+digital_output RoomC_RoomD_Partition_Open;
+digital_output RoomC_RoomD_Partition_Closed;
+digital_output RoomD_RoomA_Partition_Open;
+digital_output RoomD_RoomA_Partition_Closed;
+
+digital_output RoomA_Uncombined;
+digital_output RoomB_Uncombined;
+digital_output RoomC_Uncombined;
+digital_output RoomD_Uncombined;
+digital_output RoomA_RoomB_Combined;
+digital_output RoomA_RoomB_RoomC_Combined;
+digital_output RoomB_RoomC_Combined;
+digital_output RoomB_RoomC_RoomD_Combined;
+digital_output RoomC_RoomD_Combined;
+digital_output RoomC_RoomD_RoomA_Combined;
+digital_output RoomD_RoomA_Combined;
+digital_output RoomD_RoomA_RoomB_Combined;
+digital_output All_Combined;
+
+string_output RoomA_State$;
+string_output RoomB_State$;
+string_output RoomC_State$;
+string_output RoomD_State$;
+
+integer roomARoomBOpen;
+integer roomBRoomCOpen;
+integer roomCRoomDOpen;
+integer roomDRoomAOpen;
+integer partitionCounter;
+
+function printPartitionState()
+{
+    trace("D-H: %i\nH-SA: %i\nSA-A: %i\nA-D: %i\nOpen: %i", roomARoomBOpen, roomBRoomCOpen, roomCRoomDOpen, roomDRoomAOpen, partitionCounter);
+}
+
+integer_function setRoomStateText()
+{
+    if(All_Combined)
+    {
+        RoomA_State$ = "All Rooms Combined";
+        RoomB_State$ = "All Rooms Combined";
+        RoomC_State$ = "All Rooms Combined";
+        RoomD_State$ = "All Rooms Combined";
+        processLogic();
+        return(0);        
+    }
+    //RoomA Rm
+    if(RoomA_Uncombined)
+        RoomA_State$ = "RoomA Room";
+    else if(RoomA_RoomB_Combined)
+    {
+        RoomA_State$ = "RoomA + RoomB Rooms";
+        RoomB_State$ = "RoomA + RoomB Rooms";
+    }
+    else if(RoomA_RoomB_RoomC_Combined)
+    {
+        RoomA_State$ = "RoomA + RoomB + RoomD Rooms";
+        RoomB_State$ = "RoomA + RoomB + RoomD Rooms";
+        RoomC_State$ = "RoomA + RoomB + RoomD Rooms";    
+    }
+    //RoomB Rm
+    if(RoomB_Uncombined)
+        RoomB_State$ = "RoomB Room";
+    else if(RoomB_RoomC_Combined)
+    {
+        RoomB_State$ = "RoomB + RoomD Rooms";
+        RoomC_State$ = "RoomB + RoomD Rooms";
+    }
+    else if(RoomB_RoomC_RoomD_Combined)
+    {
+        RoomB_State$ = "RoomB + RoomD + RoomD Rooms";
+        RoomC_State$ = "RoomB + RoomD + RoomD Rooms";
+        RoomD_State$ = "RoomB + RoomD + RoomD Rooms";
+    }
+    //RoomD Rm
+    if(RoomC_Uncombined)
+        RoomC_State$ = "RoomD Room";
+    else if(RoomC_RoomD_Combined)
+    {
+        RoomC_State$ = "RoomD + RoomD Rooms";
+        RoomD_State$  =  "RoomD + RoomD Rooms";
+    }
+    else if(RoomC_RoomD_RoomA_Combined)
+    {
+        RoomC_State$ = "RoomD + RoomD + RoomA Rooms";
+        RoomD_State$  =  "RoomD + RoomD + RoomA Rooms";
+        RoomA_State$ = "RoomD + RoomD + RoomA Rooms";      
+    }
+    //RoomD Rm
+    if(RoomD_Uncombined)
+        RoomD_State$ = "RoomD Room";
+    else if(RoomD_RoomA_Combined)
+    {
+        RoomD_State$ = "RoomD + RoomA Room";
+        RoomA_State$ = "RoomD + RoomA Room";
+    }
+    else if(RoomD_RoomA_RoomB_Combined)
+    {
+        RoomD_State$ = "RoomD + RoomA + RoomB Room";
+        RoomA_State$ = "RoomD + RoomA + RoomB Room";
+        RoomB_State$ = "RoomD + RoomA + RoomB Room";
+    }
+
+    processLogic();
+    return(0);
+}
+
+integer_function countOpenPartitions()
+{
+    partitionCounter = 0;
+    if(roomARoomBOpen)
+        partitionCounter = partitionCounter + 1;
+    if(roomBRoomCOpen)
+        partitionCounter = partitionCounter + 1;
+    if(roomCRoomDOpen)
+        partitionCounter = partitionCounter + 1;
+    if(roomDRoomAOpen)
+        partitionCounter = partitionCounter + 1;
+
+    return(partitionCounter);
+}
+
+function uncombineAllRms()
+{
+    roomARoomBOpen = false;
+    roomBRoomCOpen = false;
+    roomCRoomDOpen = false;
+    roomDRoomAOpen = false;
+
+    RoomA_RoomB_Combined = off;
+    RoomA_RoomB_RoomC_Combined = off;
+    RoomB_RoomC_Combined = off;
+    RoomB_RoomC_RoomD_Combined = off;
+    RoomC_RoomD_Combined = off;
+    RoomC_RoomD_RoomA_Combined = off;
+    RoomD_RoomA_Combined = off;
+    RoomD_RoomA_RoomB_Combined = off;
+    All_Combined = off;
+
+    RoomA_Uncombined = on;
+    RoomB_Uncombined = on;
+    RoomC_Uncombined = on;
+    RoomD_Uncombined = on;
+
+    RoomA_RoomB_Partition_Open = off;
+    RoomA_RoomB_Partition_Closed = on;
+    RoomB_RoomC_Partition_Open = off;
+    RoomB_RoomC_Partition_Closed = on;
+    RoomC_RoomD_Partition_Open = off;
+    RoomC_RoomD_Partition_Closed = on;
+    RoomD_RoomA_Partition_Open = off;
+    RoomD_RoomA_Partition_Closed = on;
+
+    processLogic();
+}
+
+function combineAllRms()
+{
+    RoomA_RoomB_Combined = off;
+    RoomA_RoomB_RoomC_Combined = off;
+    RoomB_RoomC_Combined = off;
+    RoomB_RoomC_RoomD_Combined = off;
+    RoomC_RoomD_Combined = off;
+    RoomC_RoomD_RoomA_Combined = off;
+    RoomD_RoomA_Combined = off;
+    RoomD_RoomA_RoomB_Combined = off;
+    RoomA_Uncombined = off;
+    RoomB_Uncombined = off;
+    RoomC_Uncombined = off;
+    RoomD_Uncombined = off;
+
+    All_Combined = on;
+
+    processLogic();
+}
+
+push RoomA_RoomB_Partition
+{
+    integer numOpenPartions;
+    roomARoomBOpen = !roomARoomBOpen;
+    numOpenPartions = countOpenPartitions();
+
+    if(numOpenPartions >= 3)
+    {
+        combineAllRms();
+        setRoomStateText();
+        return;
+    }
+    else
+        All_Combined = off;
+
+    if(roomARoomBOpen)
+    {
+        RoomA_RoomB_Partition_Closed = off;
+        RoomA_RoomB_Partition_Open = on;
+        RoomA_Uncombined = off;
+        RoomB_Uncombined = off;
+
+        if(roomBRoomCOpen)
+        {
+            RoomB_RoomC_Combined = off;
+            RoomA_RoomB_RoomC_Combined = on;
+        }
+        else if(roomDRoomAOpen)
+        {
+            RoomD_RoomA_Combined = off;
+            RoomD_RoomA_RoomB_Combined = on;
+        }
+        else
+            RoomA_RoomB_Combined = on;
+    }
+    else //uncombine rooms
+    {
+        RoomA_RoomB_Partition_Open = off; 
+        RoomA_RoomB_Partition_Closed = on;
+        RoomA_RoomB_Combined = off;
+
+        if(roomBRoomCOpen)
+        {
+            if(roomCRoomDOpen)
+            {
+                RoomC_RoomD_Combined = off;
+                RoomB_RoomC_Combined = off;
+                RoomB_RoomC_RoomD_Combined = on; 
+            }
+            else
+            {
+                RoomB_RoomC_RoomD_Combined = off;
+                RoomA_RoomB_RoomC_Combined = off;
+                RoomB_RoomC_Combined = on;
+            }
+        }
+        if(roomDRoomAOpen)
+        {
+            if(roomCRoomDOpen)
+            {
+                RoomC_RoomD_Combined = off;
+                RoomD_RoomA_Combined = off;
+                RoomC_RoomD_RoomA_Combined = on;
+            }
+            else
+            {
+                RoomC_RoomD_RoomA_Combined = off;
+                RoomD_RoomA_RoomB_Combined = off;
+                RoomD_RoomA_Combined = on;
+            }
+        }
+        if(!roomDRoomAOpen)
+        {
+            RoomA_RoomB_Combined = off;
+            RoomA_RoomB_RoomC_Combined = off;
+            RoomA_Uncombined = on;
+        }
+        if(!roomBRoomCOpen)
+        {
+            RoomB_RoomC_Combined = off;
+            RoomB_RoomC_RoomD_Combined = off;
+            RoomB_Uncombined = on;
+        }
+    }
+    setRoomStateText();
+    printPartitionState();
+}
+push RoomB_RoomC_Partition
+{
+    integer numOpenPartions;
+    roomBRoomCOpen = !roomBRoomCOpen;
+    numOpenPartions = countOpenPartitions();
+
+    if(numOpenPartions >= 3)
+    {
+        combineAllRms();
+        setRoomStateText();
+        return;
+    }
+    else
+        All_Combined = off;
+
+    if(roomBRoomCOpen)
+    {
+        RoomB_RoomC_Partition_Closed = off;
+        RoomB_RoomC_Partition_Open = on;
+        RoomB_Uncombined = off;
+        RoomC_Uncombined = off;
+
+        if(roomARoomBOpen)
+        {
+            RoomA_RoomB_Combined = off;
+            RoomA_RoomB_RoomC_Combined = on;
+        }
+        else if(roomCRoomDOpen)
+        {
+            RoomB_RoomC_RoomD_Combined = off;
+            RoomB_RoomC_RoomD_Combined = on;
+        }
+        else
+            RoomB_RoomC_Combined = on;
+    }
+    else //room uncombined
+    {
+        RoomB_RoomC_Partition_Open = off;
+        RoomB_RoomC_Partition_Closed = on;
+        RoomB_RoomC_Combined = off;
+
+        if(roomCRoomDOpen)
+        {
+            if(roomDRoomAOpen)
+            {
+                RoomD_RoomA_Combined = off;
+                RoomC_RoomD_Combined = off;
+                RoomC_RoomD_RoomA_Combined = on;
+            }
+            else
+            {
+                RoomC_RoomD_RoomA_Combined = off;
+                RoomB_RoomC_RoomD_Combined = off;                
+                RoomC_RoomD_Combined = on;
+            }
+        }
+        if(roomARoomBOpen)
+        {
+            if(roomDRoomAOpen)
+            {
+                RoomD_RoomA_Combined = off;
+                RoomA_RoomB_Combined = off;
+                RoomD_RoomA_RoomB_Combined = on;
+            }
+            else
+            {
+                RoomD_RoomA_RoomB_Combined = off;
+                RoomA_RoomB_RoomC_Combined = off;
+                RoomA_RoomB_Combined = on;
+            }
+        }
+        if(!roomCRoomDOpen)
+        {
+            RoomC_RoomD_Combined = off;
+            RoomC_RoomD_RoomA_Combined = off;
+            RoomC_Uncombined = on;
+        }
+        if(!roomARoomBOpen)
+        {
+            RoomB_RoomC_Combined = off;
+            RoomB_RoomC_RoomD_Combined = off;
+            RoomB_Uncombined = on;
+        }
+    }
+    setRoomStateText();
+    printPartitionState();
+}
+push RoomC_RoomD_Partition
+{
+    integer numOpenPartions;
+    roomCRoomDOpen = !roomCRoomDOpen;
+    numOpenPartions = countOpenPartitions();
+
+    if(numOpenPartions >= 3)
+    {
+        combineAllRms();
+        setRoomStateText();
+        return;
+    }
+    else
+        All_Combined = off;
+
+    if(roomCRoomDOpen) //room combined
+    {
+        RoomC_RoomD_Partition_Closed = off;
+        RoomC_RoomD_Partition_Open = on;
+        RoomC_Uncombined = off;
+        RoomD_Uncombined = off;
+
+        if(roomDRoomAOpen)
+        {
+            RoomD_RoomA_Combined = off;
+            RoomC_RoomD_RoomA_Combined = on;
+        }
+        else if(roomBRoomCOpen)
+        {
+            RoomB_RoomC_Combined = off;
+            RoomB_RoomC_RoomD_Combined = on;
+        }
+        else
+            RoomC_RoomD_Combined = on;
+    }
+    else //room uncombined
+    {
+        RoomC_RoomD_Partition_Open = off;
+        RoomC_RoomD_Partition_Closed = on;
+        RoomC_RoomD_Combined = off;
+
+        if(roomDRoomAOpen)
+        {
+            if(roomARoomBOpen)
+            {
+                RoomD_RoomA_Combined = off;
+                RoomA_RoomB_Combined = off;
+                RoomD_RoomA_RoomB_Combined = on;
+            }
+            else
+            {
+                RoomD_RoomA_RoomB_Combined = off;
+                RoomC_RoomD_RoomA_Combined = off;
+                RoomD_RoomA_Combined = on;
+            }
+        }
+        if(roomBRoomCOpen)
+        {
+            if(roomARoomBOpen)
+            {
+                RoomB_RoomC_Combined = off;
+                RoomA_RoomB_Combined = off;
+                RoomA_RoomB_RoomC_Combined = on;
+            }
+            else
+            {
+                RoomA_RoomB_RoomC_Combined = off;
+                RoomB_RoomC_RoomD_Combined = off;
+                RoomB_RoomC_Combined = on;
+            }
+        }
+        if(!roomDRoomAOpen)
+        {
+            RoomD_RoomA_Combined = off;
+            RoomD_RoomA_RoomB_Combined = off;
+            RoomD_Uncombined = on;
+        }
+        if(!roomBRoomCOpen)
+        {
+            RoomC_RoomD_Combined = off;
+            RoomC_RoomD_RoomA_Combined = off;
+            RoomC_Uncombined = on;
+        }
+    }
+    setRoomStateText();
+    printPartitionState();
+}
+push RoomD_RoomA_Partition
+{
+    integer numOpenPartions;
+    roomDRoomAOpen = !roomDRoomAOpen;
+    numOpenPartions = countOpenPartitions();
+
+    if(numOpenPartions >= 3)
+    {
+        combineAllRms();
+        setRoomStateText();
+        return;
+    }
+    else
+        All_Combined = off;
+
+    if(roomDRoomAOpen) //room combined
+    {
+        RoomD_RoomA_Partition_Closed = off;
+        RoomD_RoomA_Partition_Open = on;
+        RoomD_Uncombined = off;
+        RoomA_Uncombined = off;
+
+        if(roomARoomBOpen)
+        {
+            RoomA_RoomB_Combined = off;
+            RoomD_RoomA_Combined = off;
+            RoomD_RoomA_RoomB_Combined = on;
+        }
+        else if(roomCRoomDOpen)
+        {
+            RoomC_RoomD_Combined = off;
+            RoomD_RoomA_Combined = off;
+            RoomC_RoomD_RoomA_Combined = on;
+        }
+        else
+            RoomD_RoomA_Combined = on;
+    }
+    else //room uncombined
+    {
+        RoomD_RoomA_Partition_Open = off;
+        RoomD_RoomA_Partition_Closed = on;
+        RoomD_RoomA_Combined = off;
+
+        if(roomARoomBOpen)
+        {
+            if(roomBRoomCOpen)
+            {
+                RoomA_RoomB_Combined = off;
+                RoomB_RoomC_Combined = off;
+                RoomA_RoomB_RoomC_Combined = on;
+            }
+            else
+            {
+                RoomA_RoomB_RoomC_Combined = off;
+                RoomC_RoomD_RoomA_Combined = off;
+                RoomA_RoomB_Combined = on;
+            }
+        }
+        if(roomCRoomDOpen)
+        {
+            if(roomBRoomCOpen)
+            {
+                RoomC_RoomD_Combined = off;
+                RoomB_RoomC_Combined = off;
+                RoomB_RoomC_RoomD_Combined = on;
+            }
+            else
+            {
+                RoomB_RoomC_RoomD_Combined = off;
+                RoomD_RoomA_RoomB_Combined = off;
+                RoomC_RoomD_Combined = on;
+            }
+        }
+        if(!roomARoomBOpen)
+        {
+            RoomA_RoomB_Combined = off;
+            RoomA_RoomB_RoomC_Combined = off;
+            RoomA_Uncombined = on;
+        }
+        if(!roomCRoomDOpen)
+        {
+            RoomD_RoomA_Combined = off;
+            RoomD_RoomA_RoomB_Combined = off;            
+            RoomD_Uncombined = on;
+        }
+    }
+    setRoomStateText();
+    printPartitionState();
+}
+
+function main()
+{
+    waitForInitializationComplete();
+    print("Room Combine Processor init complete");
+    uncombineAllRms();
+}
