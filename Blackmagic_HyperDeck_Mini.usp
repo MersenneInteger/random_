@@ -71,7 +71,7 @@ push Connect
     }
 	catch
 	{
-        generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
+        	generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
 		print("Exception thrown connecting socket$: %s", getExceptionMessage());
 	}
 }
@@ -97,43 +97,43 @@ push Play
 
 push Record
 {
-    sendCmd(REC_CMD);
+    	sendCmd(REC_CMD);
 	lastCmdSent = REC_CMD;
 }
 
 push Stop
 {
-    sendCmd(STOP_CMD);
+    	sendCmd(STOP_CMD);
 	lastCmdSent = STOP_CMD;
 }
 
 socketConnect tcpClient
 {
-    isConnected = true;
+    	isConnected = true;
 	Connected = on;
-    print("[%s] connected", ip);
+    	print("[%s] connected", ip);
 }
 
 socketDisconnect tcpClient
 {
-    isConnected = false;
+    	isConnected = false;
 	Connected = off;
-    print("[%s] Disconnected", ip);
+    	print("[%s] Disconnected", ip);
 }
 
 socketStatus tcpClient
 {
-    hdSocketStatus = socketGetStatus();
-    #IF_DEFINED DEBUG
-        if(hdSocketStatus = 0)
-            print("[%s] Not Connected", ip);
-        else if(hdSocketStatus = 1)
-            print("[%s] Waiting for connection", ip);
-        else if(hdSocketStatus = 2)
-            print("[%s] Connected", ip);
-        else if(hdSocketStatus >= 3 && hdSocketStatus <= 5)
-            print("[%s] Connection Failed", ip);
-    #ENDIF
+    	hdSocketStatus = socketGetStatus();
+    	#IF_DEFINED DEBUG
+		if(hdSocketStatus = 0)
+		    print("[%s] Not Connected", ip);
+		else if(hdSocketStatus = 1)
+		    print("[%s] Waiting for connection", ip);
+		else if(hdSocketStatus = 2)
+		    print("[%s] Connected", ip);
+		else if(hdSocketStatus >= 3 && hdSocketStatus <= 5)
+		    print("[%s] Connection Failed", ip);
+	#ENDIF
 }
 
 threadsafe socketReceive tcpClient
@@ -175,8 +175,8 @@ threadsafe socketReceive tcpClient
         }
         catch
         {
-            generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
-		    trace("Exception thrown parsing Rx$: %s", getExceptionMessage());           
+         	generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
+		trace("Exception thrown parsing Rx$: %s", getExceptionMessage());           
         }
     }
     clearbuffer(tcpClient.SocketRxBuf);
