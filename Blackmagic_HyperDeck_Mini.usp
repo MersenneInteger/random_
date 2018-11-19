@@ -3,6 +3,7 @@
 #DEFINE_CONSTANT true 1
 #DEFINE_CONSTANT false 0
 #DEFINE_CONSTANT ENABLE_REMOTE "remote: enable: true\x0d\x0a"
+#DEFINE_CONSTANT GET_TRANSPORT_INFO "transport info\x0d\x0a"
 #DEFINE_CONSTANT PLAY_CMD "Play\x0d\x0a"
 #DEFINE_CONSTANT REC_CMD "Record\x0d\x0a"
 #DEFINE_CONSTANT STOP_CMD "Stop\x0d\x0a"
@@ -22,6 +23,7 @@ digital_input _skip_;
 digital_input Play;
 digital_input Record;
 digital_input Stop;
+digital_input _skip_;
 
 digital_output _skip_;
 digital_output Connected;
@@ -92,48 +94,48 @@ release Connect
 push Play
 {
     sendCmd(PLAY_CMD);
-	lastCmdSent = PLAY_CMD;
+    lastCmdSent = PLAY_CMD;
 }
 
 push Record
 {
-    	sendCmd(REC_CMD);
-	lastCmdSent = REC_CMD;
+    sendCmd(REC_CMD);
+    lastCmdSent = REC_CMD;
 }
 
 push Stop
 {
-    	sendCmd(STOP_CMD);
-	lastCmdSent = STOP_CMD;
+    sendCmd(STOP_CMD);
+    lastCmdSent = STOP_CMD;
 }
 
 socketConnect tcpClient
 {
-    	isConnected = true;
-	Connected = on;
-    	print("[%s] connected", ip);
+    isConnected = true;
+    Connected = on;
+    print("[%s] connected", ip);
 }
 
 socketDisconnect tcpClient
 {
-    	isConnected = false;
-	Connected = off;
-    	print("[%s] Disconnected", ip);
+    isConnected = false;
+    Connected = off;
+    print("[%s] disconnected", ip);
 }
 
 socketStatus tcpClient
 {
-    	hdSocketStatus = socketGetStatus();
-    	#IF_DEFINED DEBUG
-		if(hdSocketStatus = 0)
-		    print("[%s] Not Connected", ip);
-		else if(hdSocketStatus = 1)
-		    print("[%s] Waiting for connection", ip);
-		else if(hdSocketStatus = 2)
-		    print("[%s] Connected", ip);
-		else if(hdSocketStatus >= 3 && hdSocketStatus <= 5)
-		    print("[%s] Connection Failed", ip);
-	#ENDIF
+    hdSocketStatus = socketGetStatus();
+    #IF_DEFINED DEBUG
+        if(hdSocketStatus = 0)
+            print("[%s] Not Connected", ip);
+        else if(hdSocketStatus = 1)
+            print("[%s] Waiting for connection", ip);
+        else if(hdSocketStatus = 2)
+            print("[%s] Connected", ip);
+        else if(hdSocketStatus >= 3 && hdSocketStatus <= 5)
+            print("[%s] Connection Failed", ip);
+    #ENDIF
 }
 
 threadsafe socketReceive tcpClient
@@ -153,18 +155,21 @@ threadsafe socketReceive tcpClient
                     Record_Fb = off;
                     Stop_Fb = off;
                     Play_Fb = on;
+		    Status = "Playing";
                 }
                 else if(lastCmdSent = REC_CMD)
                 {
                     Play_Fb = off;
                     Stop_Fb = off;
                     Record_Fb = on;
+		    Status = "Recording...";
                 }
                 else if(lastCmdSent = STOP_CMD)
                 {
                     Play_Fb = off;
                     Record_Fb = off;
                     Stop_Fb = on;
+		    Status = "Stopped";
                 }
                 lastCmdSent = "";
             }
@@ -175,8 +180,8 @@ threadsafe socketReceive tcpClient
         }
         catch
         {
-         	generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
-		trace("Exception thrown parsing Rx$: %s", getExceptionMessage());           
+            generateUserError("%s Exception Thrown %s", getSymbolInstanceName(), getExceptionMessage());
+            trace("Exception thrown parsing Rx$: %s", getExceptionMessage());           
         }
     }
     clearbuffer(tcpClient.SocketRxBuf);
@@ -187,4 +192,5 @@ function main()
     waitForInitializationComplete();
     isConnected = false;
     lastCmdSent = "";
+    Status = "";
 }
