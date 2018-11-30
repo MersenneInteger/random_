@@ -1,0 +1,187 @@
+/*******************************************************************************************
+  Compiler Directives
+*******************************************************************************************/
+#DEFINE_CONSTANT true 1
+#DEFINE_CONSTANT false 0
+#DEFINE_CONSTANT MAX_CAP 15
+#DEFINE_CONSTANT STRLEN 32
+#DEFINE_CONSTANT PULSE_TIME 50
+#DEFINE_CONSTANT PATH "\\NVRAM\\dir.bin"
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+
+digital_input _skip_;
+digital_input DeleteUser;
+digital_input SaveUser;
+digital_input _skip_;
+digital_input DialSelected;
+digital_input _skip_;
+digital_input ContactSelected[MAX_CAP];
+digital_input _skip_;
+string_input Name[STRLEN];
+string_input Number[STRLEN];
+
+digital_output _skip_;
+digital_output _skip_;
+digital_output _skip_;
+digital_output _skip_;
+digital_output DialPulse;
+digital_output _skip_;
+digital_output ContactSelectedFb[MAX_CAP];
+string_output _skip_;
+string_output Error;
+string_output _skip_;
+string_output DialString;
+string_output _skip_;
+string_output Contact[MAX_CAP];
+
+structure User
+{
+    string _name[STRLEN];
+    string _number[STRLEN];
+};
+User _User[MAX_CAP];
+
+integer selectedContact, numOfUsers;
+
+function refreshContacts()
+{
+    integer i;
+    numOfUsers = 0;
+    for(i = 0 to MAX_CAP-1)
+    {
+        Contact[i+1] = _User[i]._name + " : " + _User[i]._number;
+        if(_User[i]._name != "" && _User[i]._number != "")
+            numOfUsers = numOfUsers + 1;
+    }
+}
+
+function readFile()
+{
+    signed_integer fileHandle, bytesRead;
+    integer i;
+    i = 0;
+
+    startFileOperations();
+    try
+    {
+        fileHandle = fileOpenShared(PATH, _O_RDONLY | _O_CREAT | _O_BINARY);
+        if(fileHandle >= 0)
+        {
+            while(FileEOF(fileHandle) = 0)
+            {
+                readStructure(fileHandle, _User[i], bytesRead);
+                if(bytesRead < 0 )
+                    makeString(Error, "Error reading from file: %d", bytesRead);
+                i = i + 1;
+            }
+            fileClose(fileHandle);
+        }
+    }
+    catch
+    {
+        makeString(Error, "Error Opening File: %i", fileHandle);
+        generateUserError("Exception Thrown Writing to File: %s", getExceptionMessage());
+    }
+    endFileOperations();
+}
+
+function writeFile()
+{
+    signed_integer fileHandle, bytesWritten;
+    integer i;
+    
+    startFileOperations();
+    try
+    {
+        fileHandle = fileOpenShared(PATH, _O_WRONLY | _O_CREAT | _O_BINARY);
+        if(fileHandle >= 0)
+        {
+            for(i = 0 to MAX_CAP-1)
+            {
+                if(numOfUsers > 0 && _User[i]._name = "" && _User[i]._number = "")
+                    break;
+                writeStructure(fileHandle, _User[i], bytesWritten);
+                if(bytesWritten < 0)
+                    makeString(Error, "Error writting to file: %d", bytesWritten); 
+           	}
+            fileClose(fileHandle);
+        }
+    }
+    catch
+    {
+        makeString(Error, "Error Opening File: %i", fileHandle);
+        generateUserError("Exception Thrown Writing to File: %s", getExceptionMessage());
+    }
+    endFileOperations();
+}
+
+push SaveUser
+{
+    if(numOfUsers = MAX_CAP)
+    {
+        makeString(Error, "Error: max capacity reached");
+        terminateEvent;
+    }
+    _User[numOfUsers]._name = Name;
+    _User[numOfUsers]._number = Number;
+    writeFile();
+    refreshContacts();
+}
+
+push DeleteUser
+{
+    integer i;
+
+    if(selectedContact = -1)
+        terminateEvent;
+    _User[selectedContact]._name = "";
+    _User[selectedContact]._name = "";
+    for(i = selectedContact to MAX_CAP-2)
+    {
+        _User[i]._name = _User[i+1]._name;
+        _User[i]._number = _User[i+1]._number;
+    }
+    _User[MAX_CAP-1]._name = "";
+    _User[MAX_CAP-1]._number = "";
+    ContactSelectedFb[selectedContact+1] = off;
+    selectedContact = -1;
+    writeFile();
+    refreshContacts();
+}
+
+push ContactSelected
+{
+    selectedContact = getLastModifiedArrayIndex()-1;
+    setArray(ContactSelectedFb, off);
+    ContactSelectedFb[selectedContact+1] = on;
+    print("username: %s number: %s", _User[selectedContact]._name, _User[selectedContact]._number);
+}
+
+push DialSelected
+{
+    if(selectedContact != -1)
+    {
+        makeString(DialString, "%s", _User[selectedContact]._number);
+        wait(PULSE_TIME)
+            pulse(PULSE_TIME, DialPulse);
+    }
+}
+
+function main()
+{
+    integer i;
+    waitForInitializationComplete();
+    Error = "";
+    for(i = 0 to MAX_CAP-1)
+    {
+        _User[i]._name = "";
+        _User[i]._number = "";
+    }
+    wait(200)
+    {
+        readFile();
+        refreshContacts();
+    }
+}
