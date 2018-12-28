@@ -1,0 +1,297 @@
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#DEFINE_CONSTANT true 1
+#DEFINE_CONSTANT false 0
+//#DEFINE_CONSTANT debug 1
+#DEFINE_CONSTANT PULSE_TIME 30
+#DEFINE_CONSTANT DAYS_IN_WEEK 6
+
+#Help_Begin
+	Update clock by connecting an oscillator to the Poll digital input
+	Polling time should be between 1-10 seconds for best results and no longer than 60 seconds
+#Help_End
+
+digital_input
+	Poll,
+	_skip_,
+	Inc_Startup_Hour,
+	Inc_Startup_Minute,
+	Dec_Startup_Hour,
+	Dec_Startup_Minute,
+	_skip_,
+	_skip_,
+	Inc_Shutdown_Hour,
+	Inc_Shutdown_Minute,
+	Dec_Shutdown_Hour,
+	Dec_Shutdown_Minute,
+	_skip_,
+	_skip_,
+	_skip_,
+	Startup_Days,
+	Shutdown_Days,
+	_skip_,
+	Days[7,7];
+
+digital_output
+	Startup_Trigger,
+	Shutdown_Trigger,
+	_skip_,_skip_,_skip_,_skip_,
+	Startup_AM_Fb,
+	Startup_PM_Fb,
+	_skip_,_skip_,_skip_,_skip_,
+	Shutdown_AM_Fb,
+	Shutdown_PM_Fb,
+ 	_skip_,
+	Startup_Days_Fb,
+	Shutdown_Days_Fb,
+	_skip_,
+	Days_Fb[7,7];
+
+string_output
+	_skip_,
+	Startup_Hour$,
+	Startup_Minute$,
+	Shutdown_Hour$,
+	Shutdown_Minute$;
+
+structure _time
+{
+	integer hour;
+	integer minute;
+	integer dayOfWeek[DAYS_IN_WEEK];
+};
+nonvolatile _time Current_Time; 
+nonvolatile _time Startup_Time;
+nonvolatile _time Shutdown_Time;
+
+integer startupFlag;
+integer shutdownFlag;
+nonvolatile integer currentDayOfWeek;
+
+function updateTime()
+{
+ 	Current_Time.hour = getHourNum();
+ 	Current_Time.minute = getMinutesNum();
+	Current_Time.dayOfWeek[0] = getDayOfWeekNum();
+	currentDayOfWeek = getDayofWeekNum();
+     
+	#IF_DEFINED debug
+		trace("Current_Time.hour %d\n", Current_Time.hour);
+		trace("Current_Time.minute %d\n", Current_Time.minute);
+		trace("Current_Time.dayOfWeek %d\n", currentDayOfWeek);
+	
+		trace("Startup_Time.hour %d\n", Startup_Time.hour);
+		trace("Startup_Time.minute %d\n", Startup_Time.minute);
+		trace("Startup_Time.dayOfWeek true/false: %d\n", Startup_Time.dayOfWeek[currentDayOfWeek]);
+	
+		trace("Shutdown_Time.hour %d\n", Shutdown_Time.hour);
+		trace("Shutdown_Time.minute %d\n", Shutdown_Time.minute);
+		trace("Shutdown_Time.dayOfWeek true/false: %d\n", Shutdown_Time.dayOfWeek[currentDayOfWeek]);
+	#ENDIF
+}
+
+function updateGui()
+{
+	if(Startup_Time.hour < 12)
+	{
+		Startup_PM_Fb = off;
+		Startup_AM_Fb = on;
+		Startup_Hour$ = itoa(Startup_Time.hour);	
+	}
+	else if(Startup_Time.hour > 12)
+	{
+		Startup_Hour$ = itoa(Startup_Time.hour - 12);
+		Startup_AM_Fb = off;
+		Startup_PM_Fb = on;
+	}
+	else
+	{
+		Startup_AM_Fb = off;
+		Startup_PM_Fb = on;
+		Startup_Hour$ = itoa(Startup_Time.hour);		
+	}
+
+	if(Shutdown_Time.hour < 12)
+	{
+		Shutdown_PM_Fb = off;
+		Shutdown_AM_Fb = on;
+		Shutdown_Hour$ = itoa(Shutdown_Time.hour);	
+	}
+	else if(Shutdown_Time.hour > 12)
+	{
+		Shutdown_Hour$ = itoa(Shutdown_Time.hour - 12);
+		Shutdown_AM_Fb = off;
+		Shutdown_PM_Fb = on;
+	}
+	else
+	{
+		Shutdown_AM_Fb = off;
+		Shutdown_PM_Fb = on;
+		Shutdown_Hour$ = itoa(Shutdown_Time.hour);		
+	}
+    
+	if(Startup_Time.minute < 10)
+		Startup_Minute$ = "0" + itoa(Startup_Time.minute);
+	else
+		Startup_Minute$ = itoa(Startup_Time.minute);
+	if(Shutdown_Time.minute < 10)
+		Shutdown_Minute$ = "0" + itoa(Shutdown_Time.minute);
+	else	
+		Shutdown_Minute$ = itoa(Shutdown_Time.minute);
+}
+
+function updateDays()
+{
+	integer i;
+	setArray(Days_Fb, off);
+	if(Startup_Days_Fb)
+		for(i = 0 to DAYS_IN_WEEK)
+			Days_Fb[i+1] = Startup_Time.dayOfWeek[i];
+	else if(Shutdown_Days_Fb)
+		for(i = 0 to DAYS_IN_WEEK)
+			Days_Fb[i+1] = Shutdown_Time.dayOfWeek[i];
+}
+
+push Poll
+{
+	updateTime();
+	//startup
+    if(Current_Time.minute = Startup_Time.minute
+		&& Current_Time.hour = Startup_time.hour
+		&& Startup_Time.dayOfWeek[currentDayOfWeek])
+	{
+		if(!startupFlag)
+		{
+			pulse(PULSE_TIME, Startup_Trigger);
+			startupFlag = true;
+		}
+	}
+	else
+		startupFlag = false;
+	//shutdown
+    if(Current_Time.minute = Shutdown_Time.minute
+		&& Current_Time.hour = Shutdown_time.hour
+		&& Shutdown_Time.dayOfWeek[currentDayOfWeek])
+	{
+		if(!shutdownFlag)
+		{
+			pulse(PULSE_TIME, Shutdown_Trigger);
+			shutdownFlag = true;
+		}
+	}
+	else
+		shutdownFlag = false;
+}
+
+push Inc_Startup_Hour
+{
+	if(Startup_Time.hour < 23)
+		Startup_Time.hour  = Startup_Time.hour + 1;
+	else
+		Startup_Time.hour = 0;
+	updateGui();
+}
+
+push Dec_Startup_Hour
+{
+	if(Startup_Time.hour > 1)
+		Startup_Time.hour  = Startup_Time.hour - 1;
+	else
+		Startup_Time.hour = 0;
+	updateGui();
+}
+
+push Inc_Startup_Minute
+{
+	if(Startup_Time.minute < 59)
+		Startup_Time.minute = Startup_Time.minute + 1;
+	else
+		Startup_Time.minute = 0;
+	updateGui();
+}
+
+push Dec_Startup_Minute
+{
+	if(Startup_Time.minute > 1)
+		Startup_Time.minute = Startup_Time.minute - 1;
+	else
+		Startup_Time.minute = 59;
+	updateGui();
+}
+
+push Inc_Shutdown_Hour
+{
+	if(Shutdown_Time.hour < 23)
+		Shutdown_Time.hour  = Shutdown_Time.hour + 1;
+	else
+		Shutdown_Time.hour = 0;
+	updateGui();
+}
+
+push Dec_Shutdown_Hour
+{
+	if(Shutdown_Time.hour > 1)
+		Shutdown_Time.hour  = Shutdown_Time.hour - 1;
+	else
+		Shutdown_Time.hour = 0;
+	updateGui();
+}
+
+push Inc_Shutdown_Minute
+{
+	if(Shutdown_Time.minute < 59)
+		Shutdown_Time.minute = Shutdown_Time.minute + 1;
+	else
+		Shutdown_Time.minute = 0;
+	updateGui();
+}
+
+push Dec_Shutdown_Minute
+{
+	if(Shutdown_Time.minute > 1)
+		Shutdown_Time.minute = Shutdown_Time.minute - 1;
+	else
+		Shutdown_Time.minute = 59;
+	updateGui();
+}
+
+push Startup_Days
+{
+	Shutdown_Days_Fb = off;
+	Startup_Days_Fb = on;
+	updateDays();
+	updateGui();
+}
+
+push Shutdown_Days
+{
+	Startup_Days_Fb = off;
+	Shutdown_Days_Fb = on;
+	updateDays();
+	updateGui();
+}
+
+push Days
+{
+	integer lastDaySelected;
+
+	lastDaySelected = getLastModifiedArrayIndex()-1;
+	if(Startup_Days_Fb)
+		Startup_Time.dayOfWeek[lastDaySelected] = !Startup_Time.dayOfWeek[lastDaySelected];
+	else if(Shutdown_Days_Fb)
+		Shutdown_Time.dayOfWeek[lastDaySelected] = !Shutdown_Time.dayOfWeek[lastDaySelected];
+	updateDays();
+	updateGui();
+}
+
+function main()
+{
+	waitForInitializationComplete();
+	startupFlag = false;
+	shutdownFlag = false;
+	Shutdown_Days_Fb = off;
+	Startup_Days_Fb = on;
+	updateDays();
+	updateGui();
+}
