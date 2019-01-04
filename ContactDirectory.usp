@@ -3,7 +3,7 @@
 *******************************************************************************************/
 #DEFINE_CONSTANT true 1
 #DEFINE_CONSTANT false 0
-#DEFINE_CONSTANT MAX_CAP 15
+#DEFINE_CONSTANT MAX_CAP 7
 #DEFINE_CONSTANT STRLEN 32
 #DEFINE_CONSTANT PULSE_TIME 50
 #DEFINE_CONSTANT PATH "\\NVRAM\\dir.bin"
@@ -11,7 +11,7 @@
 #ENABLE_STACK_CHECKING
 #ENABLE_TRACE
 
-digital_input _skip_;
+digital_input EditUser;
 digital_input DeleteUser;
 digital_input SaveUser;
 digital_input _skip_;
@@ -22,7 +22,7 @@ digital_input _skip_;
 string_input Name[STRLEN];
 string_input Number[STRLEN];
 
-digital_output _skip_;
+digital_output Loading;
 digital_output _skip_;
 digital_output _skip_;
 digital_output _skip_;
@@ -51,7 +51,7 @@ function refreshContacts()
     numOfUsers = 0;
     for(i = 0 to MAX_CAP-1)
     {
-        Contact[i+1] = _User[i]._name + " : " + _User[i]._number;
+        Contact[i+1] = _User[i]._name + "   " + _User[i]._number;
         if(_User[i]._name != "" && _User[i]._number != "")
             numOfUsers = numOfUsers + 1;
     }
@@ -64,6 +64,8 @@ function readFile()
     i = 0;
 
     startFileOperations();
+    
+    #IF_SERIES3
     try
     {
         fileHandle = fileOpenShared(PATH, _O_RDONLY | _O_CREAT | _O_BINARY);
@@ -82,8 +84,24 @@ function readFile()
     catch
     {
         makeString(Error, "Error Opening File: %i", fileHandle);
-        generateUserError("Exception Thrown Writing to File: %s", getExceptionMessage());
+        generateUserError("Exception Thrown Reading From File: %s", getExceptionMessage());
     }
+    
+    #ELSE
+    fileHandle = fileOpenShared(PATH, _O_RDONLY | _O_CREAT | _O_BINARY);
+    if(fileHandle >= 0)
+    {
+        while(FileEOF(fileHandle) = 0)
+        {
+            readStructure(fileHandle, _User[i], bytesRead);
+            if(bytesRead < 0 )
+                makeString(Error, "Error reading from file: %d", bytesRead);
+            i = i + 1;
+        }
+        fileClose(fileHandle);
+    }
+    #ENDIF
+
     endFileOperations();
 }
 
@@ -93,6 +111,8 @@ function writeFile()
     integer i;
     
     startFileOperations();
+    
+    #IF_SERIES3
     try
     {
         fileHandle = fileOpenShared(PATH, _O_WRONLY | _O_CREAT | _O_BINARY);
@@ -104,7 +124,7 @@ function writeFile()
                     break;
                 writeStructure(fileHandle, _User[i], bytesWritten);
                 if(bytesWritten < 0)
-                    makeString(Error, "Error writting to file: %d", bytesWritten); 
+                    makeString(Error, "Error Writting To File: %d", bytesWritten); 
            	}
             fileClose(fileHandle);
         }
@@ -114,7 +134,57 @@ function writeFile()
         makeString(Error, "Error Opening File: %i", fileHandle);
         generateUserError("Exception Thrown Writing to File: %s", getExceptionMessage());
     }
+    
+    #ELSE
+    fileHandle = fileOpenShared(PATH, _O_WRONLY | _O_CREAT | _O_BINARY);
+    if(fileHandle >= 0)
+    {
+        for(i = 0 to MAX_CAP-1)
+        {
+            if(numOfUsers > 0 && _User[i]._name = "" && _User[i]._number = "")
+                break;
+            writeStructure(fileHandle, _User[i], bytesWritten);
+            if(bytesWritten < 0)
+                makeString(Error, "Error Writting To File: %d", bytesWritten); 
+       	}
+        fileClose(fileHandle);
+    }
+    #ENDIF
+    
     endFileOperations();
+}
+
+function swap(integer outer, integer inner)
+{
+    string nameTemp[STRLEN];
+	string numberTemp[STRLEN];
+    
+    nameTemp = _User[outer]._name;
+	numberTemp = _User[outer]._number;
+	_User[outer]._name = _User[inner]._name;
+	_User[outer]._number = _User[inner]._number;
+	_User[inner]._name = nameTemp;
+	_User[inner]._number = numberTemp;
+}
+
+function bubbleSort() //O(n^2)...
+{
+    integer j, k;
+
+    for(j = 0 to MAX_CAP-1)
+         for(k = 0 to MAX_CAP-1)
+	         if(compareStrings(_User[j]._name, _User[k]._name) = -1)
+                 swap(j, k);
+}
+
+push EditUser
+{
+    if(selectedContact != -1)
+        terminateEvent;
+    _User[selectedContact]._name = Name;
+    _User[selectedContact]._number = Number;
+    setArray(ContactSelectedFb, off);
+    selectedContact = -1;   
 }
 
 push SaveUser
@@ -126,8 +196,17 @@ push SaveUser
     }
     _User[numOfUsers]._name = Name;
     _User[numOfUsers]._number = Number;
-    writeFile();
-    refreshContacts();
+    
+    Loading = on;
+    bubbleSort();
+	wait(100) {
+    	writeFile();
+    	refreshContacts();
+        setArray(ContactSelectedFb, off);
+        selectedContact = -1;
+        Loading = off;
+	}
+    processLogic();
 }
 
 push DeleteUser
@@ -138,6 +217,7 @@ push DeleteUser
         terminateEvent;
     _User[selectedContact]._name = "";
     _User[selectedContact]._name = "";
+    
     for(i = selectedContact to MAX_CAP-2)
     {
         _User[i]._name = _User[i+1]._name;
@@ -145,7 +225,8 @@ push DeleteUser
     }
     _User[MAX_CAP-1]._name = "";
     _User[MAX_CAP-1]._number = "";
-    ContactSelectedFb[selectedContact+1] = off;
+    
+    setArray(ContactSelectedFb, off);
     selectedContact = -1;
     writeFile();
     refreshContacts();
@@ -154,6 +235,11 @@ push DeleteUser
 push ContactSelected
 {
     selectedContact = getLastModifiedArrayIndex()-1;
+    if(_User[selectedContact]._name = "" && _User[selectedContact]._number = "")
+    {
+        selectedContact = -1;
+        terminateEvent;
+    }
     setArray(ContactSelectedFb, off);
     ContactSelectedFb[selectedContact+1] = on;
     print("username: %s number: %s", _User[selectedContact]._name, _User[selectedContact]._number);
@@ -169,18 +255,25 @@ push DialSelected
     }
 }
 
+release EditUser, SaveUser, DeleteUser, ContactSelected, DialSelected
+{
+     wait(150) 
+         Error = "";
+}
+
 function main()
 {
     integer i;
     waitForInitializationComplete();
+    
     Error = "";
+    selectedContact = -1;
     for(i = 0 to MAX_CAP-1)
     {
         _User[i]._name = "";
         _User[i]._number = "";
     }
-    wait(200)
-    {
+    wait(200) {
         readFile();
         refreshContacts();
     }
